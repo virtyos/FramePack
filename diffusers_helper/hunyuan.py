@@ -88,18 +88,18 @@ def vae_decode_fake(latents):
     images = images.clamp(0.0, 1.0)
 
     return images
-
-
+    
 @torch.no_grad()
 def vae_decode(latents, vae, image_mode=False):
-    latents = latents / vae.config.scaling_factor
+    with torch.cuda.amp.autocast(dtype=torch.bfloat16): # torch.bfloat16/torch.float16, bfloat16 is means best performance
+        latents = latents / vae.config.scaling_factor
 
-    if not image_mode:
-        image = vae.decode(latents.to(device=vae.device, dtype=vae.dtype)).sample
-    else:
-        latents = latents.to(device=vae.device, dtype=vae.dtype).unbind(2)
-        image = [vae.decode(l.unsqueeze(2)).sample for l in latents]
-        image = torch.cat(image, dim=2)
+        if not image_mode:
+            image = vae.decode(latents.to(device=vae.device, dtype=torch.float16)).sample 
+        else:
+            latents = latents.to(device=vae.device, dtype=torch.float16).unbind(2)
+            image = [vae.decode(l.unsqueeze(2)).sample for l in latents]
+            image = torch.cat(image, dim=2)
 
     return image
 
